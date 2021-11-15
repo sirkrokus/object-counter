@@ -1,6 +1,3 @@
-# тест трекера
-# ищет на соседних фреймах ранее выделенный объект и вычисляет его новые координаты
-
 import imutils
 import cv2
 import detector
@@ -55,16 +52,16 @@ class ObjectCounter:
         frame_copy = copy.deepcopy(frame)
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-        # обновим координаты отслеживаемых объектов
+        # update coords of tracked objects
         self.object_tracker.update_trackers(frame_copy, rgb_frame)
 
-        # детектируем объекты на фрейме
+        # detect objects on a frame
         if self.need_detect(frame_counter, self.detect_frequency):
             detected_objects = self.detect(frame)
             pos_len = len(detected_objects)
             self.log.debug(f"{pos_len} object(s) detected")
 
-            # нарисуем на фрейме найденные объекты
+            # draw the found objects on the frame
             if self.is_visualization_available():
                 self.draw_detected_object(detected_objects, frame_copy)
 
@@ -90,13 +87,13 @@ class ObjectCounter:
             cv2.putText(frame_copy, f"{startX}:{startY}, {endX}:{endY}", (startX, startY - 3),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.32, (0, 0, 200))
 
-    # понять, какие объекты уже отслеживаются и какие новые
+    # we need to understand what objects are new and what was already detected before
     def sync_with_tracker(self, rgb_frame, detected_objects):
         self.log.debug("sync with a tracker...")
 
-        # если еще нет отслеживаемых объектов, добавим все
-        # иначе проанализируем дистанции между детектированными и отслеживаемыми
-        # и решим, какие появились, а какие исчезли
+        # if we don't have any objects add it all
+        # else analyze distances before tracked and detected objects
+        # and decide what became hidden or appear
         if self.object_tracker.count() == 0:
             self.object_tracker.append_all(rgb_frame, detected_objects)
         else:

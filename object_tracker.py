@@ -18,17 +18,17 @@ class TrackableObject:
         cx = int((start_x + end_x) / 2.0)
         cy = int((start_y + end_y) / 2.0)
         self.center = (cx, cy)
-        self.initial_center = (cx, cy)  # центр объекта, когда он только появился в области наблюдения
-        self.final_center = None  # центр объекта, когда он исчез
+        self.initial_center = (cx, cy)  # center of an object when it is appeared in an observable area
+        self.final_center = None  # center of the object when it is hidden
         self.appear_time = datetime.datetime.now()
         self.disappear_time = None
         self.disappeared = False
-        self.not_found_counter = 0  # счетчик сколько раз объект не был найден
+        self.not_found_counter = 0  # counter how many times an object was not found (detected)
         self.log = app_logger.init()
 
     def consider_that_dissapear(self):
         self.not_found_counter += 1
-        self.log.info(f"объект #{self.object_id} НЕ найден: {self.not_found_counter}")
+        self.log.info(f"object #{self.object_id} is NOT found: {self.not_found_counter}")
 
     def set_disappear(self, force_dissapear: bool, max_missed_frames: int, on_dissapear_event_function):
         if self.disappeared:
@@ -41,7 +41,7 @@ class TrackableObject:
         cy = int((self.rectangle[1] + self.rectangle[3]) / 2.0)
         self.final_center = (cx, cy)
         self.disappear_time = datetime.datetime.now()
-        self.log.info(f"объект #{self.object_id} исчез ({self.not_found_counter})! {self.rectangle}")
+        self.log.info(f"object #{self.object_id} is disappear ({self.not_found_counter})! {self.rectangle}")
         on_dissapear_event_function(self)
 
     def set_rectangle(self, start_x, start_y, end_x, end_y):
@@ -55,11 +55,11 @@ class TrackableObject:
         # self.log.debug(f"#{self.object_id} {self.rectangle} вне границ фрейма? {b}")
         return b
 
-    # расстояние до точки
+    # distance to a point
     def distance_to_point(self, x, y):
         return vu.distance((self.center[0], self.center[1]), (x, y))
 
-    # направление к точке - угол поворота в градусах
+    # direction to a point - a rotation angle in degrees
     def angle_to_point(self, x, y):
         return vu.angle_clockwise(self.trackable_object.center, (x, y))
 
@@ -111,8 +111,7 @@ class ObjectTracker:
                            disappeared_object.disappear_time)
         self.event_counter.count(event)
 
-    # чтобы обновить рамку объекта, создадим новый трекер на основе
-    # данных о детектированном объекте
+    # to update a frame of object create a new tracker based on detected object data
     def update_position(self, rgb_frame, tobj, detected_obj):
         tobj.tracker = self.create_tracker(rgb_frame, detected_obj)
         tobj.tracker.update(rgb_frame)
@@ -126,24 +125,24 @@ class ObjectTracker:
         (startX, startY, endX, endY) = detected_obj.rectangle
         tobj = TrackableObject(startX, startY, endX, endY, tracker)
         tobj.object_id = self.next_object_id
-        self.log.debug(f"  создан новый {tobj}")
+        self.log.debug(f"  new object is created {tobj}")
         self.next_object_id += 1
         return tobj
 
     def update_trackers(self, frame, rgb_frame):
-        # self.log.debug("обновляем трекеры всех объектов...")
+        # self.log.debug("update trackers of all objects...")
         for tobj in self.trackable_objects:
             # self.log.debug(f"обрабатываем объект {tobj}")
             if tobj.tracker is not None and not tobj.disappeared:
                 self.update_tracker(tobj, frame, rgb_frame)
 
-    # обновляем трекер объекта и проверям, если он
+    # update a object tracker and check if it is out of frame borders
     # вышел за границы фрейма
     def update_tracker(self, tobj, frame, rgb_frame):
-        self.log.debug(f"обновляем трекер для {tobj}")
+        self.log.debug(f"update tracker for {tobj}")
         tpos = tobj.tracker.get_position()
         (tstartX, tstartY, tendX, tendY) = utils.drect_to_int(tpos)
-        # self.log.debug("  старые координаты {}:{}, {}:{}".format(tstartX, tstartY, tendX, tendY))
+        # self.log.debug("  old coords {}:{}, {}:{}".format(tstartX, tstartY, tendX, tendY))
 
         # self.on_dissapear_event(rgb_frame)
         tobj.tracker.update(rgb_frame)
@@ -151,18 +150,18 @@ class ObjectTracker:
         (tstartX, tstartY, tendX, tendY) = utils.drect_to_int(tpos)
 
         tobj.set_rectangle(tstartX, tstartY, tendX, tendY)
-        # self.log.debug("  новые координаты {}:{}, {}:{}".format(tstartX, tstartY, tendX, tendY))
+        # self.log.debug("  new coords {}:{}, {}:{}".format(tstartX, tstartY, tendX, tendY))
 
-        # объект вышел за границы экрана
+        # an object is out of frame borders
         if tobj.is_out_of_frame(self.frame_width, self.frame_height):
             tobj.set_disappear(True, self.max_missed_detections, self.on_dissapear_event)
-            self.remove_all_disappeared()  # удалить исчезнувшие
+            self.remove_all_disappeared()  # remove disappeared
 
         if self.visualize:
             self.draw_tracked_object(frame, tobj)
 
     def draw_tracked_object(self, frame, tobj: TrackableObject):
-        # нарисовать на фрейме tracked область
+        # draw a tracked area on a frame
         (tstartX, tstartY, tendX, tendY) = tobj.rectangle
         cv2.rectangle(frame, (tstartX, tstartY), (tendX, tendY), (200, 0, 0))
         cv2.circle(frame, tobj.center, 3, (200, 0, 0))
@@ -172,10 +171,10 @@ class ObjectTracker:
     def remove_all_disappeared(self):
         self.trackable_objects = [tobj for tobj in self.trackable_objects if not tobj.disappeared]
 
-    # создает новый трекер на основе детектированного объекта
+    # create a new tracker based on a detected object
     def create_tracker(self, rgb_frame, detected_obj):
         (startX, startY, endX, endY) = detected_obj.rectangle  # .astype("int")
-        self.log.debug(f"создадим tracker на основе detected позиции {startX}:{startY}, {endX}:{endY}")
+        self.log.debug(f"create tracker based on a detected position {startX}:{startY}, {endX}:{endY}")
         tracker = dlib.correlation_tracker()
         rect = dlib.rectangle(startX, startY, endX, endY)
         tracker.start_track(rgb_frame, rect)
@@ -194,12 +193,12 @@ class ObjectTracker:
             tobj = self.create_trackable_object(rgb_frame, dobj)
             self.trackable_objects.append(tobj)
 
-    # посчитать дистанции между всеми вновь детектированными объектами и
-    # отслеживаемыми и решить появился ли новый объект или что-то пропало
+    # calculate distances before all newly detected and tracked objects
+    # and solve if some object is appered or disappeared
     def analyze_distances(self, rgb_frame, detected_objects):
-        self.log.debug("считаем дистанции между центроидами отслеживаемых и детектированных объектов...")
+        self.log.debug("calculate distances before centroids of all detected and tracked objects...")
 
-        # считаем дистанции между всеми отслеживаемыми и детектированными
+        # calculate distances before all tracked and detected objects
         dist_list = []
         for dobj in detected_objects:
             for tobj in self.trackable_objects:
@@ -208,20 +207,20 @@ class ObjectTracker:
                 d = vu.distance(dobj.center, tobj.center)
                 dist_list.append(Distance(d, tobj, dobj))
 
-        new_tobjs = []  # новоотслеживаемые
-        logged_d = []  # обработанные детектированные позиции (нов или апд)
-        logged_t = []  # обработанные отслеживаемые (апд)
+        new_tobjs = []  # newly tracked
+        logged_d = []  # processed detected positions (new or upd)
+        logged_t = []  # processed tracked (upd)
 
         def is_overdistanced(dist: Distance):
             (startX, startY, endX, endY) = dist.detected_object.rectangle
             dx = endX - startX
             dy = endY - startY
-            mind = dx if dx < dy else dy  # короткая сторона
-            # максимально возможная дистанция между центрами это половина короткой стороны
-            # если расстояние больше, считаем, что прямоугольники принадлежат разным объектам
+            mind = dx if dx < dy else dy  # short side
+            # max possible distance before centroids it is a half of shortest side (of object's rectangle)
+            # if the distance is bigger then the rectangles belong to different objects
             mind = mind / 2
             tf = dist.distance > mind
-            msg = "большая дистанция" if tf else "центроиды близко"
+            msg = "big distance" if tf else "centroids are closely"
             self.log.debug(
                 f"   {msg}. dx={dx}. dy={dy}. min_distance={mind}")
             return tf
@@ -234,29 +233,29 @@ class ObjectTracker:
 
         dist_list = sorted(dist_list, key=lambda x: x.distance)
         for d in dist_list:
-            self.log.debug(f" : дистанция между detected #{d.detected_object.number} и tracked #{d.tracked_object.object_id} = {d.distance}")
-            ovd = is_overdistanced(d)  # проверяем каждую дистанцию
+            self.log.debug(f" : distance before Detected #{d.detected_object.number} and Tracked #{d.tracked_object.object_id} = {d.distance}")
+            ovd = is_overdistanced(d)  # check every distance
 
-            # если детектированный объект далеко от какого-либо отслеживаемого объекта
-            # и еще не учтен в этом цикле проверки
-            # это значит, что это новый объект, который надо отслеживать
-            # создадим такой объект
+            # if a detected object is far from some tracked object
+            # and it is not yet counted in this checking loop
+            # it means that this object is new and we need track it
+            # create such object
             if ovd and is_d_not_used(d.detected_object):
                 tobj = self.create_trackable_object(rgb_frame, d.detected_object)
                 new_tobjs.append(tobj)
                 logged_d.append(d.detected_object.number)
 
-            # если дистанция маленькая и детектированный еще не обработан и отслеживаемый еще не обработан
-            # обновим область отслеживаемого объекта на вновь детектированную
+            # if a distance is small and detected object is not yet processed and tracker is not yet processed
+            # update an area of tracked object with data of this newly detected object
             if not ovd and is_d_not_used(d.detected_object) and is_t_not_used(d.tracked_object):
                 self.log.debug(
-                    f"  tracked #{d.tracked_object.object_id}. обновить область {d.tracked_object.rectangle} -> {d.detected_object.rectangle}")
+                    f"  tracked #{d.tracked_object.object_id}. update area {d.tracked_object.rectangle} -> {d.detected_object.rectangle}")
                 self.update_position(rgb_frame, d.tracked_object, d.detected_object)
                 logged_d.append(d.detected_object.number)
                 logged_t.append(d.tracked_object.object_id)
 
-        # эти отслеживаемые объекты не были продетектированы
-        # их считаем исчезнувшими
+        # these tracked objects were not detected
+        # consider them disappeared
         for tobj in self.trackable_objects:
             if is_t_not_used(tobj):
                 tobj.consider_that_dissapear()
@@ -264,25 +263,24 @@ class ObjectTracker:
 
         self.remove_all_disappeared()
 
-        # добавить все вновь созданные в общий список
+        # add all newly created to a common list
         for tobj in new_tobjs:
             self.trackable_objects.append(tobj)
             # print(f"{d}")
 
-    # если дистанция до ближайшего центроида превышает
-    # половину расстояния от центра до края детектированной области
-    # решаем, что это появился новый объект
+    # if a distance to a closest centroid is more then half of a distance from center to area's border
+    # consider that a new object is appeared
     def is_newly_detected(self, dpos, min_distance):
         (startX, startY, endX, endY) = dpos.astype("int")
         dx = endX - startX
         dy = endY - startY
-        d = dx if dx < dy else dy  # короткая сторона
-        d = d / 2  # половина короткой стороны
+        d = dx if dx < dy else dy  # short side
+        d = d / 2  # half of the short side
         tf = min_distance > d
         self.log.debug(f"is_newly_detected? {tf}. dx={dx}. dy={dy}. d={d}. min_distance={min_distance}")
         return tf
 
-    # считаем все, как исчезнувшие
+    # consider that all are disappeared
     def finalize_count(self):
         for tobj in self.trackable_objects:
             tobj.final_center = tobj.center

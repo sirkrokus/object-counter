@@ -3,32 +3,27 @@ from abc import ABCMeta, abstractmethod
 import app_logger
 
 DIRECTION = Enum("Direction", "up down left right")
-# vertical - движутся вверх-вниз. horizontal - вправо-влево
+# vertical - objects are moving up and down. horizontal - left to right and vice versa
 ORIENTATION = Enum("Orientation", "vertical horizontal")
 
 
 class LocationDescriptor:
 
     def __init__(self,
-                 user_sid, project_sid, location_sid,
                  orientation: ORIENTATION):
-        self.user_sid = user_sid
-        self.project_sid = project_sid
-        self.location_sid = location_sid
         self.orientation = orientation
-        self.path = f"{user_sid}/{project_sid}/{location_sid}/"
 
     def __repr__(self):
-        return f"LocationDescriptor. orientation={self.orientation}. path={self.path}"
+        return f"LocationDescriptor. orientation={self.orientation}"
 
 
 class CountEvent:
 
     def __init__(self,
-                 location: LocationDescriptor,  # для какой локации пришло событие
-                 direction: DIRECTION,          # в какой стороне кадра скрылся объект
-                 appear_time,                   # когда появился
-                 disappear_time):               # когда пропал
+                 location: LocationDescriptor,  # what location an event went for
+                 direction: DIRECTION,          # what side of frame an object is hidden
+                 appear_time,                   # when it is apperead
+                 disappear_time):               # when it is hidden
         self.location = location
         self.direction = direction
         self.appear_time = appear_time

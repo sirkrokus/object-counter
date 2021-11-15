@@ -32,12 +32,12 @@ def visualize_in_frame(frame_copy):
 def main():
     neuro_detector = detector.ObjectNeuroDetector("./mobilenet_ssd/MobileNetSSD_deploy.prototxt",
                                                   "./mobilenet_ssd/MobileNetSSD_deploy.caffemodel",
-                                                  # "car", 0.5)
-                                                  "person", 0.9)
+                                                  # "car", 0.5) # suggested params: max_missed_detections=17, detect_frequency=2
+                                                  "person", 0.9) # suggested params: max_missed_detections=13, detect_frequency=3
                                                   # "aeroplane", 0.6)
 
     evcnt = SimpleEventCounter()
-    location = LocationDescriptor("", "", "", ORIENTATION.vertical)
+    location = LocationDescriptor(ORIENTATION.vertical)
     object_tracker = ObjectTracker(evcnt, location, FRAME_SIZE / 2, 13, True)
     # frame_provider = TestImageFrameProvider("./frames/test_queue_1")
     frame_provider = TestVideoFrameProvider("./video/example_01_1040_1120_1u_2d.mp4")
